@@ -37,6 +37,20 @@ Safety checks made before any write:
 
 Only crosshair and sight settings are ever written. Sensitivity, graphics and everything else are left as they are.
 
+## Companion website
+
+[crosshairs.finalsrs.com](https://crosshairs.finalsrs.com) is where people share crosshairs.
+
+- **Browse online** opens the site in your browser.
+- **Publish online** copies your current crosshair's code and opens the site's Publish page. Paste it there.
+- **Import code…** also accepts a link from the site (or just its 8-character id): the app downloads that
+  crosshair's code and loads it, ready to save or apply.
+
+The app makes exactly one kind of network request: a plain GET of `/c/<id>/code` on that one address, only
+when you import a link. It is https only, follows no redirects, reads at most 16 KB, and the answer is checked
+by the same validator as a pasted code. Nothing is uploaded, and the app never sends your files, settings or
+any identifier. You don't log in to anything from the app.
+
 ## Install
 
 Download `FinalsCrosshair.exe` from the Releases page, then check it against `SHA256SUMS.txt`:

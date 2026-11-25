@@ -5,6 +5,7 @@ mod guard;
 mod gvas;
 mod logo;
 mod preview;
+mod site;
 pub use finals_crosshair_core::model;
 mod store;
 

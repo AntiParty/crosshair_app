@@ -20,7 +20,7 @@ These are the project's guarantees, so changes that weaken them will not be merg
   backup and verifying the result.
 - Only crosshair and sight settings may be written. New keys must come from the generated schema, never from user input.
 - Imported crosshair codes must be validated against the game's ranges, and rejected as a whole on the first problem.
-- No network access in the desktop app, and no new dependencies without a clear reason.
+- The only network access in the desktop app is `src/site.rs` (a GET of one crosshair code from the companion site, on user action). Keep it that way, and no new dependencies without a clear reason.
 
 ## Data and privacy
 

@@ -7,6 +7,7 @@ use eframe::egui::{self, Color32, RichText, Ui};
 use crate::guard;
 use crate::model::{self, CENTER_SHAPES, Crosshair, MELEE_LOOKS, RETICLE_SHAPES, SIGHT_SHAPES};
 use crate::preview::{self, Params};
+use crate::site;
 use crate::store::{self, Backup};
 
 const ACCENT: Color32 = Color32::from_rgb(0xFF, 0x5A, 0x36);
@@ -27,6 +28,9 @@ enum Tone {
     Bad,
 }
 
+/// Where a background download leaves its answer.
+type FetchSlot = Arc<Mutex<Option<Result<Crosshair, String>>>>;
+
 pub struct App {
     cur: Crosshair,
     presets: Vec<Crosshair>,
@@ -44,6 +48,8 @@ pub struct App {
     armed: Option<Instant>,
     import_text: String,
     show_import: bool,
+    /// An import-by-link that is downloading on its own thread; the answer lands here.
+    fetch: Option<FetchSlot>,
 }
 
 pub fn setup_style(ctx: &egui::Context) {
@@ -124,7 +130,44 @@ impl App {
             armed: None,
             import_text: String::new(),
             show_import: false,
+            fetch: None,
         }
+    }
+
+    /// Applies the answer of a finished download, if there is one.
+    fn poll_fetch(&mut self) {
+        let Some(slot) = &self.fetch else { return };
+        let done = slot.lock().ok().and_then(|mut r| r.take());
+        if let Some(result) = done {
+            self.fetch = None;
+            match result {
+                Ok(c) => {
+                    self.say(
+                        Tone::Good,
+                        format!("Imported '{}'. Save it to keep it.", c.name),
+                    );
+                    self.cur = c;
+                    self.import_text.clear();
+                    self.show_import = false;
+                }
+                Err(e) => self.say(Tone::Bad, e),
+            }
+        }
+    }
+
+    /// Starts downloading a crosshair from the site without freezing the window.
+    fn start_fetch(&mut self, ctx: &egui::Context, id: String) {
+        let slot = Arc::new(Mutex::new(None));
+        self.fetch = Some(slot.clone());
+        self.say(Tone::Info, "Downloading from the site…");
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let result = site::fetch(&id);
+            if let Ok(mut r) = slot.lock() {
+                *r = Some(result);
+            }
+            ctx.request_repaint();
+        });
     }
 
     fn say(&mut self, tone: Tone, msg: impl Into<String>) {
@@ -300,23 +343,50 @@ impl App {
                 egui::TextEdit::multiline(&mut self.import_text)
                     .desired_rows(3)
                     .desired_width(f32::INFINITY)
-                    .hint_text("Paste a crosshair code"),
+                    .hint_text("Paste a crosshair code, or a link from the site"),
             );
-            if ui.button("Import").clicked() {
-                match Crosshair::from_share_code(&self.import_text) {
-                    Ok(c) => {
-                        self.say(
-                            Tone::Good,
-                            format!("Imported '{}'. Save it to keep it.", c.name),
-                        );
-                        self.cur = c;
-                        self.import_text.clear();
-                        self.show_import = false;
+            let idle = self.fetch.is_none();
+            if ui.add_enabled(idle, egui::Button::new("Import")).clicked() {
+                if let Some(id) = site::parse_target(&self.import_text) {
+                    self.start_fetch(ui.ctx(), id);
+                } else {
+                    match Crosshair::from_share_code(&self.import_text) {
+                        Ok(c) => {
+                            self.say(
+                                Tone::Good,
+                                format!("Imported '{}'. Save it to keep it.", c.name),
+                            );
+                            self.cur = c;
+                            self.import_text.clear();
+                            self.show_import = false;
+                        }
+                        Err(e) => self.say(Tone::Bad, e),
                     }
-                    Err(e) => self.say(Tone::Bad, e),
                 }
             }
         }
+        ui.separator();
+        ui.horizontal(|ui| {
+            if ui
+                .button("Browse online")
+                .on_hover_text("Open the crosshair site in your browser")
+                .clicked()
+            {
+                site::open(&site::browse_url());
+            }
+            if ui
+                .button("Publish online")
+                .on_hover_text("Copy this crosshair's code and open the site's Publish page")
+                .clicked()
+            {
+                ui.ctx().copy_text(self.cur.to_share_code());
+                site::open(&site::publish_url());
+                self.say(
+                    Tone::Info,
+                    "Copied your code. Paste it on the Publish page that just opened.",
+                );
+            }
+        });
     }
 
     fn editor_panel(&mut self, ui: &mut Ui) {
@@ -574,6 +644,7 @@ impl App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.sync_game();
+        self.poll_fetch();
         egui::Panel::top("top").show(ui, |ui| self.top_bar(ui));
         egui::Panel::bottom("bottom").show(ui, |ui| self.bottom_bar(ui));
         egui::Panel::left("presets")
