@@ -199,6 +199,7 @@ impl App {
 
     fn top_bar(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
+            crate::logo::paint(ui, 24.0);
             ui.label(RichText::new("Finals Crosshair").size(19.0).strong());
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let (text, col) = match &self.game {
