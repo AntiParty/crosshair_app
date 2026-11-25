@@ -32,7 +32,7 @@ jobs:
           "$h  FinalsCrosshair.exe" | Out-File SHA256SUMS.txt -Encoding ascii
           Get-Content SHA256SUMS.txt
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: FinalsCrosshair.exe
       - name: Publish release
