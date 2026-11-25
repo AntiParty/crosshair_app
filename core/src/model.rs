@@ -195,6 +195,16 @@ impl Crosshair {
         serde_json::to_string(self).unwrap_or_default()
     }
 
+    /// The same crosshair as a much shorter code: only the settings that differ from the game's defaults.
+    /// `from_share_code` fills the rest in, so it round-trips.
+    pub fn to_short_code(&self) -> String {
+        Crosshair {
+            name: self.name.clone(),
+            values: self.non_default_values(),
+        }
+        .to_share_code()
+    }
+
     /// Parses and validates pasted or loaded preset text. Everything is checked against the game's schema;
     /// the first problem rejects the whole preset so nothing half-valid can reach the game's file.
     pub fn from_share_code(text: &str) -> Result<Crosshair, String> {
@@ -253,6 +263,18 @@ mod tests {
         assert_eq!(c.values["GameplayOption.Crosshair.Center.Radius"], "20.0");
         c.set_float("GameplayOption.Sights.ReticleSize", 0.9600001);
         assert_eq!(c.values["GameplayOption.Sights.ReticleSize"], "0.96");
+    }
+
+    #[test]
+    fn short_code_is_short_and_round_trips() {
+        let mut c = Crosshair::defaults();
+        c.name = "Mine".into();
+        assert!(c.to_short_code().len() < 60, "{}", c.to_short_code());
+        c.set_float("GameplayOption.Crosshair.Center.Radius", 7.0);
+        c.set_flag("GameplayOption.Crosshair.StaticReticle.Enabled", true);
+        let short = c.to_short_code();
+        assert!(short.len() < c.to_share_code().len() / 4, "{short}");
+        assert_eq!(Crosshair::from_share_code(&short).unwrap(), c);
     }
 
     #[test]

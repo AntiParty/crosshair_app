@@ -257,9 +257,16 @@ impl App {
     }
 
     fn presets_panel(&mut self, ui: &mut Ui) {
+        egui::ScrollArea::vertical()
+            .id_salt("left")
+            .auto_shrink([false, false])
+            .show(ui, |ui| self.presets_contents(ui));
+    }
+
+    fn presets_contents(&mut self, ui: &mut Ui) {
         ui.add_space(4.0);
         ui.label(RichText::new("Presets").strong().size(15.0));
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             if ui
                 .button("From game")
                 .on_hover_text("Read the crosshair you currently have in the game")
@@ -277,7 +284,8 @@ impl App {
         let mut pick = None;
         let mut delete = None;
         egui::ScrollArea::vertical()
-            .max_height(ui.available_height() - 150.0)
+            .id_salt("presets")
+            .max_height(190.0)
             .show(ui, |ui| {
                 if self.presets.is_empty() {
                     ui.label(
@@ -315,7 +323,7 @@ impl App {
         ui.separator();
         ui.label("Name");
         ui.add(egui::TextEdit::singleline(&mut self.cur.name).desired_width(f32::INFINITY));
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             if ui.button("Save preset").clicked() {
                 self.save_preset();
             }
@@ -324,7 +332,7 @@ impl App {
                 .on_hover_text("Copy this crosshair as text to share")
                 .clicked()
             {
-                ui.ctx().copy_text(self.cur.to_share_code());
+                ui.ctx().copy_text(self.cur.to_short_code());
                 self.say(Tone::Info, "Copied. Paste it to a friend or into Import.");
             }
         });
@@ -339,12 +347,17 @@ impl App {
             self.show_import = !self.show_import;
         }
         if self.show_import {
-            ui.add(
-                egui::TextEdit::multiline(&mut self.import_text)
-                    .desired_rows(3)
-                    .desired_width(f32::INFINITY)
-                    .hint_text("Paste a crosshair code, or a link from the site"),
-            );
+            egui::ScrollArea::vertical()
+                .id_salt("import")
+                .max_height(88.0)
+                .show(ui, |ui| {
+                    ui.add(
+                        egui::TextEdit::multiline(&mut self.import_text)
+                            .desired_rows(3)
+                            .desired_width(f32::INFINITY)
+                            .hint_text("Paste a crosshair code, or a link from the site"),
+                    );
+                });
             let idle = self.fetch.is_none();
             if ui.add_enabled(idle, egui::Button::new("Import")).clicked() {
                 if let Some(id) = site::parse_target(&self.import_text) {
@@ -366,7 +379,7 @@ impl App {
             }
         }
         ui.separator();
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             if ui
                 .button("Browse online")
                 .on_hover_text("Open the crosshair site in your browser")
@@ -379,7 +392,7 @@ impl App {
                 .on_hover_text("Copy this crosshair's code and open the site's Publish page")
                 .clicked()
             {
-                ui.ctx().copy_text(self.cur.to_share_code());
+                ui.ctx().copy_text(self.cur.to_short_code());
                 site::open(&site::publish_url());
                 self.say(
                     Tone::Info,
@@ -648,7 +661,7 @@ impl eframe::App for App {
         egui::Panel::top("top").show(ui, |ui| self.top_bar(ui));
         egui::Panel::bottom("bottom").show(ui, |ui| self.bottom_bar(ui));
         egui::Panel::left("presets")
-            .exact_size(224.0)
+            .exact_size(244.0)
             .resizable(false)
             .show(ui, |ui| self.presets_panel(ui));
         egui::Panel::right("editor")
