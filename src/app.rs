@@ -347,9 +347,26 @@ impl App {
             self.show_import = !self.show_import;
         }
         if self.show_import {
+            // The buttons come first: however much text is pasted below, they stay in reach.
+            let idle = self.fetch.is_none();
+            let mut do_import = false;
+            ui.horizontal(|ui| {
+                do_import = ui.add_enabled(idle, egui::Button::new("Import")).clicked();
+                if ui.button("Clear").clicked() {
+                    self.import_text.clear();
+                }
+                if self.import_text.len() > 200 {
+                    ui.label(
+                        RichText::new(format!("{} characters", self.import_text.len()))
+                            .weak()
+                            .small(),
+                    );
+                }
+            });
             egui::ScrollArea::vertical()
                 .id_salt("import")
                 .max_height(88.0)
+                .auto_shrink([false, true])
                 .show(ui, |ui| {
                     ui.add(
                         egui::TextEdit::multiline(&mut self.import_text)
@@ -358,8 +375,7 @@ impl App {
                             .hint_text("Paste a crosshair code, or a link from the site"),
                     );
                 });
-            let idle = self.fetch.is_none();
-            if ui.add_enabled(idle, egui::Button::new("Import")).clicked() {
+            if do_import {
                 if let Some(id) = site::parse_target(&self.import_text) {
                     self.start_fetch(ui.ctx(), id);
                 } else {
