@@ -1,0 +1,26 @@
+# build output and local artefacts
+/target
+/dist
+
+# secrets and local config: never commit these
+.env
+.env.*
+*.pem
+*.key
+
+# real game data and anything derived from a real player's files
+*.sav
+!tests/fixtures/opt.sav
+*.pak
+*.utoc
+*.ucas
+Exports/
+_cfg/
+*.db
+*.sqlite*
+
+# editors and OS
+.vscode/
+.idea/
+Thumbs.db
+*.log

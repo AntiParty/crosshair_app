@@ -1,0 +1,46 @@
+name: Release
+
+# Runs when a version tag such as v0.1.0 is pushed. Builds from the tagged source, runs the tests,
+# publishes the exe with its SHA-256 and a signed build attestation.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write       # create the release
+      id-token: write       # build attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test
+        run: cargo test --workspace --release --locked
+      - name: Build
+        run: cargo build --release --locked
+      - name: Package
+        shell: pwsh
+        run: |
+          Copy-Item target\release\finals_crosshair.exe FinalsCrosshair.exe
+          $h = (Get-FileHash FinalsCrosshair.exe -Algorithm SHA256).Hash.ToLower()
+          "$h  FinalsCrosshair.exe" | Out-File SHA256SUMS.txt -Encoding ascii
+          Get-Content SHA256SUMS.txt
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: FinalsCrosshair.exe
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$env:GITHUB_REF_NAME" FinalsCrosshair.exe SHA256SUMS.txt `
+            --title "$env:GITHUB_REF_NAME" `
+            --verify-tag `
+            --notes "Unofficial tool. Verify the download against SHA256SUMS.txt before running. See the README for how Apply to game stays safe."

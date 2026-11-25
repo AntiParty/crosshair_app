@@ -1,0 +1,22 @@
+name: Dependency audit
+
+# Checks Cargo.lock against the RustSec advisory database every week and when dependencies change.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  push:
+    paths: ["Cargo.lock", "**/Cargo.toml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit
