@@ -1,10 +1,9 @@
-//! The Finals Crosshair mark: a dark rounded badge, a white hexagon, a crosshair cut out of it and a red dot.
+//! The Finals Crosshair mark: a dark rounded badge, a white hexagon, and a crosshair cut out of it.
 //! The same shape is used on the website. Drawn in code so the app needs no image files: once into pixels for
 //! the window icon, once with the painter for the title bar.
 
 use eframe::egui::{self, Color32, Pos2, Rect, Stroke, Ui, Vec2};
 
-pub const ACCENT: Color32 = Color32::from_rgb(0xff, 0x4d, 0x5e);
 const DARK: Color32 = Color32::from_rgb(0x0b, 0x0b, 0x0d);
 const WHITE: Color32 = Color32::from_rgb(0xf6, 0xf6, 0xf8);
 
@@ -25,7 +24,6 @@ const BARS: [(f32, f32, f32, f32); 4] = [
     (6.6, 13.0, 11.0, 15.0),  // left
     (17.0, 13.0, 21.4, 15.0), // right
 ];
-const DOT_R: f32 = 1.5;
 
 fn in_badge(x: f32, y: f32) -> bool {
     let dx = ((x - 14.0).abs() - 14.0 + BADGE_ROUND).max(0.0);
@@ -61,9 +59,7 @@ fn sample(x: f32, y: f32) -> Option<[f32; 3]> {
     if !in_badge(x, y) {
         return None;
     }
-    let c = if (x - 14.0).powi(2) + (y - 14.0).powi(2) <= DOT_R * DOT_R {
-        ACCENT
-    } else if in_hex(x, y) && !in_bars(x, y) {
+    let c = if in_hex(x, y) && !in_bars(x, y) {
         WHITE
     } else {
         DARK
@@ -124,7 +120,6 @@ pub fn paint(ui: &mut Ui, size: f32) {
     for (x0, y0, x1, y1) in BARS {
         p.rect_filled(Rect::from_min_max(at(x0, y0), at(x1, y1)), 0.0, DARK);
     }
-    p.circle_filled(at(14.0, 14.0), DOT_R * k, ACCENT);
 }
 
 #[cfg(test)]
@@ -140,8 +135,8 @@ mod tests {
         assert_eq!(at(32, 32)[3], 255, "the middle is solid");
         assert_eq!(
             &at(32, 32)[..3],
-            &[0xff, 0x4d, 0x5e],
-            "the centre dot is red"
+            &[0xf6, 0xf6, 0xf8],
+            "the centre is white: the bars stop short of it"
         );
         assert_eq!(
             &at(24, 24)[..3],
